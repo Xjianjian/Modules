@@ -8,7 +8,7 @@
 #include "defines.h"
 #include "typedefs.h"
 #include "platformTypes.h"
-#include "PWM_Cfg.h"
+#include "pwm_Cfg.h"
 /*-----------------------------------------------------------------------------
                    		Module local defines and constants
 ------------------------------------------------------------------------------*/
