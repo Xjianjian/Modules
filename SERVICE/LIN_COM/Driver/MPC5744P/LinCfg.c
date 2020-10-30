@@ -67,7 +67,7 @@ void linCfg_pinsInit(void)
 
 		SIUL2.MSCR[SIUL_PB3].B.IBE = 1;    		/* Pad PB3: Enable pad for input - LIN0_RXD */
 		SIUL2.MSCR[SIUL_PB3].B.ODE = 1;
-		SIUL2.IMCR[SIUL_PB3].B.SSS = 1;   	/* LIN0_RXD: connected to pad PB3 */
+		SIUL2.IMCR[SIUL_IN_PB3].B.SSS = 1;   	/* LIN0_RXD: connected to pad PB3 */
 	}
 
 
@@ -79,7 +79,7 @@ void linCfg_pinsInit(void)
 
 		SIUL2.MSCR[SIUL_PB13].B.IBE = 1;    		/* Pad PB3: Enable pad for input - LIN0_RXD */
 		SIUL2.MSCR[SIUL_PB13].B.ODE = 1;
-		SIUL2.IMCR[SIUL_PB13].B.SSS = 1;   	/* LIN0_RXD: connected to pad PB3 */
+		SIUL2.IMCR[SIUL_IN_PB13].B.SSS = 1;   	/* LIN0_RXD: connected to pad PB3 */
 	}
 }
 
