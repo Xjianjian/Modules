@@ -27,12 +27,12 @@
 #define m_dtcPrio_high 3
 
 
-
+//#define m_dtcInfoCnt	149
 
 /*------------------------------------------------------------------------------
                                    Data types
 ------------------------------------------------------------------------------*/
-typedef struct
+typedef union
 {
     uint8_t all;
     struct
@@ -53,7 +53,7 @@ typedef struct
 	uint8_t faultCnt;
 	uint8_t ageCnt;
 	uint8_t dcCnt;
-	bool isStored;
+	uint8_t isStored;
     dtcStatus_t dtcStatus;
 }obdDiagDt_t;
 
@@ -89,9 +89,9 @@ typedef struct
 /*------------------------------------------------------------------------------
                       External declaration of global RAM-Variables
 ------------------------------------------------------------------------------*/
-extern obdDiagDt_t obdDiagDtGrp[];
-extern uint16_t obdFFOrder[];
-extern obdFFDt_t obdFFDtGrp[];
+extern obdDiagDt_t __attribute__ ((section(".eeDiagDtAddr"))) obdDiagDtGrp[];
+extern uint16_t __attribute__ ((section(".eeDiagDtAddr"))) obdFFOrder[];
+extern obdFFDt_t __attribute__ ((section(".eeDiagDtAddr"))) obdFFDtGrp[];
 
 
 /*------------------------------------------------------------------------------
