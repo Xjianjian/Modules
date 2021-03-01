@@ -64,6 +64,8 @@ extern const uint16_t uds_didRdCnt;
 extern const uds_didRdCfg_t uds_didRdCfgGrp[];
 extern const uint16_t uds_didWtCnt;
 extern const uds_didWtCfg_t uds_didWtCfgGrp[];
+extern const uint16_t uds_snapCnt;
+extern const uds_didRdCfg_t uds_snapListCfgGrp[];
 /*------------------------------------------------------------------------------
                     External declaration of global EEPROM-Variables
 ------------------------------------------------------------------------------*/
