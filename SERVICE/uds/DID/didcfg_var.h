@@ -47,7 +47,7 @@
 #define DIDCFG_SUPPLIER_NAME_LNG		10
 #define DIDCFG_ECU_NAME_LNG		10
 #define DIDCFG_SUPR_HARD_VAR_LNG		8
-#define DIDCFG_SUPR_SOFT_VAR_LNG		21
+#define DIDCFG_SUPR_SOFT_VAR_LNG		13
 
 #define DIDCFG_BOOTLOADER_VAR_LNG		16
 #define DIDCFG_EOL_DTID_LNG		8
@@ -55,15 +55,16 @@
 //did write
 #define DIDCFG_VIN_LNG		17
 
+#define DIDCFG_FINGERPRINT_LNG		10
+
 extern const unsigned char DF_softwareVar[DIDCFG_SOFT_VAR_LNG];//
 extern const unsigned char port_numbers[DIDCFG_PORT_NUM_LNG];//
 extern const unsigned char DF_hardwareVar[DIDCFG_HARD_VAR_LNG];//
 extern const unsigned char DFHS_supplierName[DIDCFG_SUPPLIER_NAME_LNG];//
 extern const unsigned char DFHS_ECUName[DIDCFG_ECU_NAME_LNG];//
 extern const unsigned char DFHS_supplierHardVar[DIDCFG_SUPR_HARD_VAR_LNG];//
-extern const unsigned char DFHS_supplierSoftVar[DIDCFG_SUPR_SOFT_VAR_LNG];//
+//extern const unsigned char DFHS_supplierSoftVar[DIDCFG_SUPR_SOFT_VAR_LNG];//
 extern const unsigned char DFHS_BootLoaderVar[DIDCFG_BOOTLOADER_VAR_LNG];//
-extern const unsigned char DFHS_EOLDtID[DIDCFG_EOL_DTID_LNG];
 
 
 
@@ -81,4 +82,6 @@ extern const unsigned char DFHS_EOLDtID[DIDCFG_EOL_DTID_LNG];
 
 
 #endif
+
+
 
