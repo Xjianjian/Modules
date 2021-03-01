@@ -1,4 +1,18 @@
 
+/*
+* Copyright (c) File,SHENZHEN HANGSHENG NEW ENERGY Co.,Ltd.
+* All Rights Reserved.
+* Dept.: Software Department
+* File:canCfg.h
+* Description: CAN Mailboxes and messages configrration header file, this is auto-generated
+* by CCAG tool which is developed by HSNE and should never be modified manually
+* REQ IDs: 
+* History:
+* Time:2020/5/7 11:33:53
+* User:lixiangping
+*/
+
+/* ---- Source switch on ------------------------------------------------------*/
 #ifndef CAN_CFG_H_
 #define CAN_CFG_H_
 
@@ -49,10 +63,10 @@
 #define m_can_udsRxBus m_PT_CAN
 #define m_can_udsTxBus m_PT_CAN
 /*CCP Msg information*/
-#define m_can_ccpTxMsgIndx m_can_invalidMsgIndx
-#define m_can_ccpRxMsgIndx m_can_invalidMsgIndx
-#define m_can_ccpRxBus m_can_noneCan
-#define m_can_ccpTxBus m_can_noneCan
+#define m_can_ccpTxMsgIndx 62
+#define m_can_ccpRxMsgIndx 61
+#define m_can_ccpRxBus m_PT_CAN
+#define m_can_ccpTxBus m_PT_CAN
 
 
 
@@ -62,9 +76,41 @@
 ------------------------------------------------------------------------------*/
 typedef enum 
 {
-    CLASS_CAN_0x1A0_Msg = 0,
-    CLASS_CAN_0x1B5_Msg,
-    CLASS_CAN_0x1C5_Msg
+       CCP_CAN_0x201_Msg = 0,
+    CCP_CAN_0x211_Msg,
+    CCP_CAN_0x3A1_Msg,
+    CCP_CAN_0x241_Msg,
+    CCP_CAN_0x101_Msg,
+    CCP_CAN_0x232_Msg,
+    CCP_CAN_0x222_Msg,
+    CCP_CAN_0x58_Msg,
+    CCP_CAN_0x3FE_Msg,
+    CCP_CAN_0x4FE_Msg,
+    CCP_CAN_0xA5_Msg,
+    CCP_CAN_0x122_Msg,
+    CCP_CAN_0x124_Msg,
+    CCP_CAN_0x142_Msg,
+    CCP_CAN_0x144_Msg,
+    CCP_CAN_0x1BE_Msg,
+    CCP_CAN_0x1C5_Msg,
+    CCP_CAN_0x1D5_Msg,
+    CCP_CAN_0x212_Msg,
+    CCP_CAN_0x219_Msg,
+    CCP_CAN_0x21A_Msg,
+    CCP_CAN_0x242_Msg,
+    CCP_CAN_0x252_Msg,
+    CCP_CAN_0x272_Msg,
+    CCP_CAN_0x282_Msg,
+    CCP_CAN_0x2A1_Msg,
+    CCP_CAN_0x2A2_Msg,
+    CCP_CAN_0x2A5_Msg,
+    CCP_CAN_0x2C2_Msg,
+    CCP_CAN_0x2CE_Msg,
+    CCP_CAN_0x2FE_Msg,
+    CCP_CAN_0x319_Msg,
+    CCP_CAN_0x341_Msg,
+    CCP_CAN_0x380_Msg,
+    CCP_CAN_0x39E_Msg
 }CLASS_CAN_msg_t;
 typedef enum 
 {
@@ -74,29 +120,67 @@ typedef enum
 }RESERVED_CAN_msg_t;
 typedef enum 
 {
-    PT_CAN_0x300_Msg = 0,
-    PT_CAN_0x301_Msg,
-    PT_CAN_0x302_Msg,
-    PT_CAN_0x303_Msg,
-    PT_CAN_0x304_Msg,
-    PT_CAN_0x305_Msg,
-    PT_CAN_0x306_Msg,
-    PT_CAN_0x307_Msg,
-    PT_CAN_0x309_Msg,
-    PT_CAN_0x30A_Msg,
-    PT_CAN_0x30D_Msg,
-    PT_CAN_0x310_Msg,
-    PT_CAN_0x311_Msg,
-    PT_CAN_0x312_Msg,
-    PT_CAN_0x334_Msg,
-    PT_CAN_0x336_Msg,
-    PT_CAN_0x33F_Msg,
-    PT_CAN_0x3A0_Msg,
-    PT_CAN_0x3B5_Msg,
-    PT_CAN_0x3C5_Msg,
-    PT_CAN_0x797_Msg,
-    PT_CAN_0x79A_Msg,
-    PT_CAN_0x7DF_Msg
+    CAN_3_0x301_Msg = 0,
+    CAN_3_0x302_Msg,
+    CAN_3_0x303_Msg,
+    CAN_3_0x304_Msg,
+    CAN_3_0x5A4_Msg,
+    CAN_3_0x2FA_Msg,
+    CAN_3_0x5A5_Msg,
+    CAN_3_0x331_Msg,
+    CAN_3_0x321_Msg,
+    CAN_3_0x561_Msg,
+    CAN_3_0x551_Msg,
+    CAN_3_0x111_Msg,
+    CAN_3_0x401_Msg,
+    CAN_3_0x511_Msg,
+    CAN_3_0x521_Msg,
+    CAN_3_0x531_Msg,
+    CAN_3_0x5F1_Msg,
+	CAN_3_0x181_Msg,
+    CAN_3_0x101_Msg,
+    CAN_3_0x441_Msg,
+    CAN_3_0x3A6_Msg,
+    CAN_3_0x731_Msg,
+    CAN_3_0x7E7_Msg,
+    CAN_3_0x7DF_Msg,
+    CAN_3_0x330_Msg,
+    CAN_3_0x797_Msg,
+    CAN_3_0x7B1_Msg,
+    CAN_3_0x7EF_Msg,
+    CAN_3_0x3F3_Msg,
+    CAN_3_0x492_Msg,
+    CAN_3_0x394_Msg,
+    CAN_3_0x407_Msg,
+    CAN_3_0x487_Msg,
+    CAN_3_0x75_Msg,
+    CAN_3_0x7E_Msg,
+    CAN_3_0x4FE_Msg,
+    CAN_3_0x514_Msg,
+    CAN_3_0x574_Msg,
+    CAN_3_0x631_Msg,
+    CAN_3_0x632_Msg,
+    CAN_3_0x634_Msg,
+    CAN_3_0x637_Msg,
+    CAN_3_0x63E_Msg,
+    CAN_3_0x102_Msg,
+    CAN_3_0x103_Msg,
+    CAN_3_0x104_Msg,
+    CAN_3_0x112_Msg,
+    CAN_3_0x113_Msg,
+    CAN_3_0x114_Msg,
+    CAN_3_0x126_Msg,
+    CAN_3_0x134_Msg,
+    CAN_3_0x2C1_Msg,
+    CAN_3_0x309_Msg,
+    CAN_3_0x312_Msg,
+    CAN_3_0x313_Msg,
+	 CAN_3_0x324_Msg,
+    CAN_3_0x387_Msg,
+    CAN_3_0x38D_Msg,
+    CAN_3_0x38E_Msg,
+    CAN_3_0x39E_Msg,
+    CAN_3_0x334_Msg
 }PT_CAN_msg_t;
 typedef struct
 {
