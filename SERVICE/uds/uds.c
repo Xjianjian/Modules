@@ -123,7 +123,7 @@ static void serv_memoryWritePositiveRsp(uint32_t memoryAddr,uint16_t memorySize)
 static void uds_memRwBck_clear(void);
 static void uds_memRwBkc_task(void);
 static void uds_ioCtrlBkc_task(void);
-
+static void uds_requestValid(void);
 
 
 /* ------------------- Pre-set service process function declare --------------------- */
@@ -166,6 +166,7 @@ void uds_requestProcess(void)
     /* check search result */
     if (serv_i < udsServCnt)
     {
+    	uds_requestValid();
         /* Find service */
         /* Session Support Check */
         if (0 != (udsServCfg[serv_i].ssSptMask & servm_ssSptMask(actSessionIndex)))
@@ -356,6 +357,8 @@ static void uds_enterDefaultSession(void)
         /* re-locked all SA levels */
         actSaLockerMask = 0xFF;
     }
+    uds_dtcSettingOn = TRUE;
+    uds_clearDefSession();
 }
 
 /*
@@ -403,8 +406,8 @@ void serv_sessionControl(void)
 		/* Call session switch callback function */
 		targetSessionType  = uds_popRequestData(0x00);
 		/* Pre-push active response first data (request switch session)  */
-		uds_pushRspData(targetSessionType);
-	    switchRst = uds_sessionSwitch(actSessionType, targetSessionType);
+		uds_pushRspData(targetSessionType&0x0f);
+	    switchRst = uds_sessionSwitch(actSessionType, targetSessionType&0x0f);
 	    if (nrsp_positiveResponse == switchRst)
 	    {
 	    	uds_pushRspData(0x00);
@@ -439,8 +442,7 @@ void serv_sessionControl(void)
 	        	&&  (sessionType_prog == targetSessionType))
 	        {
 
-	        	//uds_rspPending();
-	        	uds_sendResponse();
+	        	uds_rspPending();
 
 				swt_feedDog();
 				mc33907_changeWdWindow(WD_DISABLE);
@@ -449,19 +451,9 @@ void serv_sessionControl(void)
 				swt_feedDog();
 				disableInterrupts;
 #ifdef  GLOBAL_FBL_IN_EE
-				while(1 == MemIf_needRenewSt())
-				{
-					swt_feedDog();
-					MemIf_mainFunction();
-				}
 
-				(void)MemIf_WriteEE(EepromCfg_wrUpdtFlag,writeUpdtReqFlag,8);
-	
-				while(1 == MemIf_needRenewSt())
-				{
-					swt_feedDog();
-					MemIf_mainFunction();
-				}
+				MemIf_mainFunction();
+				(void)MemIf_WriteEE(EepromCfg_wrUpdtFlag,writeUpdtReqFlag,8,1);
 
 #else
 				while(m_ee256_idle != ee256_getSt())
@@ -480,17 +472,18 @@ void serv_sessionControl(void)
 
 
 				swt_feedDog();
-				//can_reset(0);
-				//can_reset(1);
-				//can_reset(2);
-				//sysClk_uninit();
 				/* Makesure watchdog is enable */
 				for (;;)
 				{
-					//swt_feedDog();
 					/* Waiting watchdog timeout reset */
 				}
 	        }
+
+			if(targetSessionType & 0x80)
+			{
+				nt_rsp_reset();
+				return;
+			}
 	        /* Positive response */
 	        uds_sendResponse();
 	    }
@@ -543,20 +536,27 @@ void serv_securityAccess(void)
         /* SA Protect check */
         if (0 == sv_saProtectDelayTick)
         {
-            /* Security access step check (Get seed or check key) */
-            if (TRUE == saGetSeed)
-            {
-                /* Get seed */
-                /* Update seed condition check */
-                if (0 == (sv_saSeedUnCheckMask & servm_saLvSptMask(saLevel_i)))
-                {
-                    /* Call update seed position */
-                    uds_saUpdateSeed(saLevelMap[saLevel_i].level);
-                    actSaLockerMask |= servm_saLvSptMask(saLevel_i);
-                }
-                /* response seed */
-                uds_pushRspBuf(saLevelMap[saLevel_i].seedBuf, saLevelMap[saLevel_i].seedLen);
-                uds_sendResponse();
+			/* Security access step check (Get seed or check key) */
+			if (TRUE == saGetSeed)
+			{
+				/* Get seed */
+				if(0x00 == uds_remainRequestDLC())
+				{
+					/* Update seed condition check */
+					if (0 == (sv_saSeedUnCheckMask & servm_saLvSptMask(saLevel_i)))
+					{
+						/* Call update seed position */
+						uds_saUpdateSeed(saLevelMap[saLevel_i].level);
+						actSaLockerMask |= servm_saLvSptMask(saLevel_i);
+					}
+					/* response seed */
+					uds_pushRspBuf(saLevelMap[saLevel_i].seedBuf, saLevelMap[saLevel_i].seedLen);
+					uds_sendResponse();
+				}
+				else
+				{
+					uds_negativeRsp(nrsp_incorrectMessageLengthOrInvalidFormat);
+				}
             }
             else
             {
@@ -586,6 +586,7 @@ void serv_securityAccess(void)
 						if (TRUE == uds_saCheckKey(saLevelMap[saLevel_i].level))
 	                    {
 	                        /* Check pass, unlock target level and send positive response */
+							sv_saInvalidAccessCnt = 0;
 	                        actSaLockerMask &= (~(servm_saLvSptMask(saLevel_i)));
 	                        uds_sendResponse();
 	                    }
@@ -593,7 +594,22 @@ void serv_securityAccess(void)
 	                    {
 	                        /* Check fail, (re-)locked all and send negative response */
 	                        actSaLockerMask = 0xFFu;
-	                        uds_negativeRsp(nrsp_invalidKey);
+	                        /* SA invalid access times count increase */
+							if (sv_saInvalidAccessCnt < saProtectLimitCnt)
+							{
+								sv_saInvalidAccessCnt++;
+							}
+							/* Protect check */
+							if (sv_saInvalidAccessCnt >= saProtectLimitCnt)
+							{
+								/* SA invalid access times has exceeded the limited times, start protect */
+								sv_saProtectDelayTick = saProtectDelayTime;
+								uds_negativeRsp(nrsp_exceedNumberOfAttempts);
+							}
+							else
+							{
+		                        uds_negativeRsp(nrsp_invalidKey);
+							}
 	                    }
 					}
 					else
@@ -622,15 +638,26 @@ void serv_securityAccess(void)
 
 void serv_testPresent(void)
 {
+	uint8_t reqCode;
     /* Check sub-function */
 	if(0x01 != uds_remainRequestDLC())
 	{
 		uds_negativeRsp(nrsp_incorrectMessageLengthOrInvalidFormat);
+		return;
 	}
-	else if (0x00 != uds_popRequestData(0xFF))
+
+	reqCode = uds_popRequestData(0xFF);
+	if(reqCode)
 	{
-		/* Negative response */
-		 uds_negativeRsp(nrsp_subFunctionNotSupported);
+		if(reqCode == 0x80)
+		{
+
+		}
+		else
+		{
+			/* Negative response */
+			 uds_negativeRsp(nrsp_subFunctionNotSupported);
+		}
 	}
     else
     {
@@ -1313,6 +1340,12 @@ void serv_routineControl(void)
     uint16_t rtid_i = 0; /* Routine ID index */
     uint8_t rtRst = nrsp_positiveResponse; /* Pre set result to positive response state */
     
+    if(TRUE != uds_31serviceAllowed())
+    {
+    	uds_negativeRsp(nrsp_conditionsNotCorrect);
+    	return;
+    }
+
     /* Routine control type check */
     if (0 != (udsRtGlobalMask & (0x01 << rtCtrlType)))
     {
@@ -1323,7 +1356,7 @@ void serv_routineControl(void)
         curRTID = curRTID | (uint16_t)(uds_popRequestData(0x00));
 
         /* Search routine */
-        for (; rtid_i < udsRtIDcnt; rtid_i++)
+        for (rtid_i = 0; rtid_i < udsRtIDcnt; rtid_i++)
         {
             if (curRTID == udsRtIDcfg[rtid_i].rtid)
             {
@@ -1571,7 +1604,7 @@ void serv_dtcInforRead(void)
 		}
 		else
 		{
-			uds_negativeRsp(nrsp_conditionsNotCorrect);
+			uds_negativeRsp(nrsp_subFunctionNotSupported);
 		}
 	}
 	else
@@ -1606,7 +1639,7 @@ void serv_ioControl(void)
 	uint8_t byteIndx = 0;
 	uint32_t physicalVal = 0;
 	uint8_t nrsp_code = nrsp_positiveResponse;
-	void * pCurrPhysical = NULL;
+	//void * pCurrPhysical = NULL;
 	if(TRUE == uds_ioCtrlAllowed())
 	{
 		popDt = uds_popRequestData(0xFF);
@@ -1636,6 +1669,7 @@ void serv_ioControl(void)
 						if(0x00 == uds_remainRequestDLC())
 						{
 							uds_pushRspData(servm_ioCtrl_returnCtrlToEcu);
+#if 0
 							if(NULL != udsIoCtrlCfg[did_i].lock)
 							{
 								(*udsIoCtrlCfg[did_i].lock) = FALSE;
@@ -1658,6 +1692,11 @@ void serv_ioControl(void)
 								{
 									uds_pushRspData(*(uint8_t *)(udsIoCtrlCfg[did_i].addr + byteIndx));
 								}
+							}
+#endif
+							if(NULL != udsIoCtrlCfg[did_i].phy2Comm)
+							{
+								udsIoCtrlCfg[did_i].phy2Comm(0);
 							}
 							uds_sendResponse();
 						}
@@ -1771,6 +1810,7 @@ void serv_ioControl(void)
 						}
 						break;
 					case servm_ioCtrl_shortTermAdjust:
+#if 0
 						if(0x02 < uds_remainRequestDLC())
 						{
 							uds_pushRspData(servm_ioCtrl_shortTermAdjust);
@@ -1894,6 +1934,31 @@ void serv_ioControl(void)
 							else
 							{
 								uds_negativeRsp(nrsp_conditionsNotCorrect);
+							}
+						}
+#endif
+						if(0x01 == uds_remainRequestDLC())
+						{
+							uint8_t ctrlRequest = 0;
+							uds_pushRspData(servm_ioCtrl_shortTermAdjust);
+							ctrlRequest = uds_popRequestData(0x00);
+							uds_pushRspData(ctrlRequest);
+
+							if(NULL != udsIoCtrlCfg[did_i].comm2Phy)
+							{
+								nrsp_code = udsIoCtrlCfg[did_i].comm2Phy((void *)&ctrlRequest);
+								if(nrsp_positiveResponse == nrsp_code)
+								{
+									uds_sendResponse();
+								}
+								else
+								{
+									uds_negativeRsp(nrsp_code);
+								}
+							}
+							else
+							{
+								uds_negativeRsp(nrsp_subFunctionNotSupported);
 							}
 						}
 						else
