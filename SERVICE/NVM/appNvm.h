@@ -56,8 +56,3 @@ extern bool anv_noDirtyBlock(void);
 extern bool anv_blockIsDirty(uint16_t blk);
 
 #endif
-
-
-
-
-
