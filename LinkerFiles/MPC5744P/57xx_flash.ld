@@ -31,9 +31,9 @@ MEMORY
     
     m_cal_ram : 		org = 0x40000000, len = 32k
     m_eeBkAddr : 		org = 0x40008000, len = 32k
-    m_eeDiagDtAddr :	org = 0x40010000, len = 4k
+    m_eeDiagDtAddr :	org = 0x40010000, len = 16k
     
-    m_data :	org = 0x40011000,len = 322K
+    m_data :	org = 0x40014000,len = 384K-0x14000
     int_dram  : org = 0x50800000,   len = 64K    
 }
 
@@ -59,27 +59,88 @@ SECTIONS
     .core_exceptions_table   : ALIGN(4096)
     {
       __IVPR_VALUE = . ;
-      *(.core_exceptions_table)
+      KEEP(*(.core_exceptions_table))
     } > m_text
 
     .intc_vector_table   : ALIGN(4096)
     {
-      *(.intc_vector_table)
+      KEEP(*(.intc_vector_table))
     } > m_text
       
     .text : 
     {
       *(.text.startup)
       *(.text)
-      *(.init)
+
       *(.text.*)
+      KEEP (*(.init))
+      KEEP (*(.fini))            
       . = ALIGN(16);
+    } > m_text
+      
+    .ctors :
+    {
+      __CTOR_LIST__ = .;
+      /* gcc uses crtbegin.o to find the start of
+         the constructors, so we make sure it is
+         first.  Because this is a wildcard, it
+         doesn't matter if the user does not
+         actually link against crtbegin.o; the
+         linker won't look for a file to match a
+         wildcard.  The wildcard also means that it
+         doesn't matter which directory crtbegin.o
+         is in.  */
+      KEEP (*crtbegin.o(.ctors))
+      KEEP (*crtbegin?.o(.ctors))
+      /* We don't want to include the .ctor section from
+         from the crtend.o file until after the sorted ctors.
+         The .ctor section from the crtend file contains the
+         end of ctors marker and it must be last */
+      KEEP (*(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors))
+      KEEP (*(SORT(.ctors.*)))
+      KEEP (*(.ctors))
+      __CTOR_END__ = .;
+    } > m_text
+
+    .dtors :
+    {
+      __DTOR_LIST__ = .;
+      KEEP (*crtbegin.o(.dtors))
+      KEEP (*crtbegin?.o(.dtors))
+      KEEP (*(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors))
+      KEEP (*(SORT(.dtors.*)))
+      KEEP (*(.dtors))
+      __DTOR_END__ = .;
+    } > m_text
+        
+    .preinit_array :
+    {
+      PROVIDE_HIDDEN (__preinit_array_start = .);
+      KEEP (*(.preinit_array*))
+      PROVIDE_HIDDEN (__preinit_array_end = .);
+    } > m_text
+
+    .init_array :
+    {
+      PROVIDE_HIDDEN (__init_array_start = .);
+      KEEP (*(SORT(.init_array.*)))
+      KEEP (*(.init_array*))
+      PROVIDE_HIDDEN (__init_array_end = .);
+    } > m_text
+
+    .fini_array :
+    {
+      PROVIDE_HIDDEN (__fini_array_start = .);
+      KEEP (*(SORT(.fini_array.*)))
+      KEEP (*(.fini_array*))
+      PROVIDE_HIDDEN (__fini_array_end = .);
     } > m_text
           
     .rodata :
     {
       *(.rodata)
       *(.rodata.*)
+	  *(.got1)
     } > m_text
     
     .eh_frame_hdr : { *(.eh_frame_hdr) } > m_text
@@ -89,11 +150,17 @@ SECTIONS
 	{
 	  *(.data)
 	  *(.data.*)
+	  *(.got.plt) 
+	  *(.got)
+	  *(.got2)
+	  *(.dynamic)
+	  *(.fixup)        
+	  . = ALIGN(4);
 	}  > m_data AT>m_text
 	
     .cal_ram :
     {
-    	*(.cal_ram)
+    	KEEP(*(.cal_ram))
     } > m_cal_ram AT>m_cal_flash
     
     .sdata2  :
@@ -130,21 +197,14 @@ SECTIONS
     
     .eeBkAddr :
     {
-    	*(.eeBkAddr)
-        *(.eeBkAddr.*)
+    	KEEP(*(.eeBkAddr))
+        KEEP(*(.eeBkAddr.*))
     } > m_eeBkAddr
     
     .eeDiagDtAddr :
     {
-    	*(.eeDiagDtAddr)
-        *(.eeDiagDtAddr.*)
-    } > m_eeDiagDtAddr AT>m_text
-    
-    
-    .eeDiagDtAddr :
-    {
-    	*(.eeDiagDtAddr)
-        *(.eeDiagDtAddr.*)
+    	KEEP(*(.eeDiagDtAddr))
+        KEEP(*(.eeDiagDtAddr.*))
     } > m_eeDiagDtAddr AT>m_text
     
     .startID :
@@ -211,6 +271,7 @@ __LOCAL_DMEM_BASE_ADDR = LOCALDMEM_BASE_ADDR;
 __BSS_SIZE    = __BSS_END - __BSS_START;    
       
 }
+
 
 
 
