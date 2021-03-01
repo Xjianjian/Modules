@@ -58,4 +58,3 @@ extern void serv_writeMemoryByAddr(void);
 
 #endif /*End of __UDS_SERVICE_H__ */
 /*--------EOF--------*/
-
