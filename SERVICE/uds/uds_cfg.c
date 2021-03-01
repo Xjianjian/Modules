@@ -9,6 +9,7 @@
 */
 
 #include "uds_types.h"
+#include "canCfg_export.h"
 #include "global_var.h"
 #include "sysClk.h"
 #include "uds.h"
@@ -19,15 +20,31 @@
 static uint8_t uds_getSaLvIndex(uint8_t saLevel);
 static bool uds_seedKeyMatchCheck(uint32_t seed,uint32_t key);
 
+#if 0
 static uint8_t uds_testRotutineStart(void);
 static uint8_t uds_testRotutineStop(void);
 static uint8_t uds_testRotutineQuery(void);
-
+#endif
 	
+static uint8_t uds_programConditionCheck(void);
 
+static uint8_t uds_fanCtrlHandle(void* ctrlReq);
+static uint8_t uds_waterPump1CtrlHandle(void* ctrlReq);
+static uint8_t uds_waterPump2CtrlHandle(void* ctrlReq);
+static uint8_t uds_waterPump3CtrlHandle(void* ctrlReq);
+static uint8_t uds_way3SoleCtrlHandle(void* ctrlReq);
+static uint8_t uds_way4SoleCtrlHandle(void* ctrlReq);
+static uint8_t uds_battPTCCtrlHandle(void* ctrlReq);
+static uint8_t uds_hvOffCmdCtrlHandle(void* ctrlReq);
 
-
-
+static void uds_fanCtrlExit(uint32_t dt);
+static void uds_waterPump1CtrlExit(uint32_t dt);
+static void uds_waterPump2CtrlExit(uint32_t dt);
+static void uds_waterPump3CtrlExit(uint32_t dt);
+static void uds_way3SoleCtrlExit(uint32_t dt);
+static void uds_way4SoleCtrlExit(uint32_t dt);
+static void uds_battPTCCtrlExit(uint32_t dt);
+static void uds_hvOffCmdCtrlExit(uint32_t dt);
 /* -------------- End user addition functions, macros, variables declare ------- */
 
 
@@ -97,8 +114,8 @@ const udsServCfg_t udsServCfg[udsServiceSptCnt] =
     {sid_sessionControl,             	ssSptMask_all,                     saLvSptMask_none,            1,      &serv_sessionControl},
     {sid_securityAccess,             	ssSptMask_ext | ssSptMask_prog,    saLvSptMask_none,            1,      &serv_securityAccess},
     {sid_testPresent,                	ssSptMask_all,                     saLvSptMask_none,            1,      &serv_testPresent},
-    {sid_readDataByIdentifier,       	ssSptMask_all,                     saLvSptMask_fbl,            2,      &serv_didRead},
-    {sid_writeDataByIdentifier,      	ssSptMask_all,                     saLvSptMask_fbl,  			3,      &serv_didWrite},
+    {sid_readDataByIdentifier,       	ssSptMask_all,                     saLvSptMask_none,            2,      &serv_didRead},
+    {sid_writeDataByIdentifier,      	ssSptMask_ext | ssSptMask_prog,    saLvSptMask_none,  			3,      &serv_didWrite},
     {sid_readMemoryByAddress,        	ssSptMask_all,                     saLvSptMask_none,            3,      &serv_readMemoryByAddr},
     {sid_writeMemoryByAddress,       	ssSptMask_all,                     saLvSptMask_none,            4,      &serv_writeMemoryByAddr},
     {sid_routineControl,             	ssSptMask_all,                     saLvSptMask_none,            3,      &serv_routineControl},
@@ -106,7 +123,7 @@ const udsServCfg_t udsServCfg[udsServiceSptCnt] =
     {sid_ecuReset,                   	ssSptMask_all,                     saLvSptMask_none,            1,      &serv_ecuReset},
     {sid_communicationControl,       	ssSptMask_ext | ssSptMask_prog,    saLvSptMask_none,            2,      &serv_comControl},
     {sid_controlDTCSetting,          	ssSptMask_ext | ssSptMask_prog,    saLvSptMask_none,            1,      &serv_dtcSetting},
-    {sid_inputOutputControlByIdentifier,ssSptMask_all,    				   saLvSptMask_cali,            3,      &serv_ioControl},
+    {sid_inputOutputControlByIdentifier,ssSptMask_ext,    				   saLvSptMask_lvl1,             3,     &serv_ioControl},
     {sid_requestDownload,            	ssSptMask_prog,                    saLvSptMask_fbl,             5,      &serv_requestDownload},
     {sid_transferData,               	ssSptMask_prog,                    saLvSptMask_fbl,             3,      &serv_transferData},
     {sid_requestTransferExit,        	ssSptMask_prog,                    saLvSptMask_fbl,             0,      &serv_requestTransferExit},
@@ -141,7 +158,7 @@ const udsRtIDcfg_t udsRtIDcfg[udsRtIDsptCnt] =
     {rtid_eraseMemory,                  NULL,        	NULL,                 NULL,               NULL},
     {rtid_checkProgrammingDependencies, NULL,		 	NULL,                 NULL,               NULL},
     {rtid_hs_stayInBoot,                NULL,        	NULL,                 NULL,               NULL},
-    {rtid_testProcess,					&uds_testRotutineStart,        &uds_testRotutineStop,                 &uds_testRotutineQuery,               NULL}
+    {rtid_programcondCheck,				uds_programConditionCheck,        NULL,                 NULL,               NULL}
 };
 
 const uint16_t udsRtIDcnt = udsRtIDsptCnt;
@@ -160,19 +177,259 @@ const chipMemCfg_t chipMemCfg[chipMem_cnt] =
 /*end chip memory range configure*/
 
 /*IO control parameters*/
-
-static const uint16_t hld_ai_c1Def = 0;
-
-
 const udsIoCtrlCfg_t udsIoCtrlCfg[udsIoCtrl_itemCnt] = 
 {
-	
-
+	{0x3A00,NULL,1,NULL,NULL,NULL,uds_fanCtrlExit,uds_fanCtrlHandle},
+	{0x3A01,NULL,1,NULL,NULL,NULL,uds_waterPump1CtrlExit,uds_waterPump1CtrlHandle},
+	{0x3A02,NULL,1,NULL,NULL,NULL,uds_waterPump2CtrlExit,uds_waterPump2CtrlHandle},
+	{0x3A03,NULL,1,NULL,NULL,NULL,uds_waterPump3CtrlExit,uds_waterPump3CtrlHandle},
+	{0x3A04,NULL,1,NULL,NULL,NULL,uds_way3SoleCtrlExit,uds_way3SoleCtrlHandle},
+	{0x3A05,NULL,1,NULL,NULL,NULL,uds_way4SoleCtrlExit,uds_way4SoleCtrlHandle},
+	{0x3A06,NULL,1,NULL,NULL,NULL,uds_battPTCCtrlExit,uds_battPTCCtrlHandle},
+	{0x3A07,NULL,1,NULL,NULL,NULL,uds_hvOffCmdCtrlExit,uds_hvOffCmdCtrlHandle},
 };
 
+static void uds_fanCtrlExit(uint32_t dt)
+{
+	(void)dt;
+	hld_po_fan_CONTROL_lock = 0;
+	hld_po_fan_CONTROL_lockVal = 0;
+}
+static void uds_waterPump1CtrlExit(uint32_t dt)
+{
+	(void)dt;
+	hld_po_pump1_CONTROL_lock = 0;
+	hld_po_pump1_CONTROL_lockVal = 0;
+}
+static void uds_waterPump2CtrlExit(uint32_t dt)
+{
+	(void)dt;
+	hld_po_pump2_CONTROL_lock = 0;
+	hld_po_pump2_CONTROL_lockVal = 0;
+}
+static void uds_waterPump3CtrlExit(uint32_t dt)
+{
+	(void)dt;
+	hld_po_pump3_CONTROL_lock = 0;
+	hld_po_pump3_CONTROL_lockVal = 0;
+}
+static void uds_way3SoleCtrlExit(uint32_t dt)
+{
+	(void)dt;
+	lin_vcu_VALVE3_DATA1_lock = 0;
+	lin_vcu_VALVE3_DATA1_lockVal = lin_vcu_VALVE3_DATA1;
+}
+static void uds_way4SoleCtrlExit(uint32_t dt)
+{
+	(void)dt;
+
+	lin_vcu_VALVE4_DATA1_lock = 0;
+	lin_vcu_VALVE4_DATA1_lockVal = lin_vcu_VALVE4_DATA1;
+
+}
+static void uds_battPTCCtrlExit(uint32_t dt)
+{
+	(void)dt;
+	lin_vcu_PTC_On_Rq_lock = 0;
+	lin_vcu_PTC_On_Rq_lockVal = 0;
+	lin_vcu_PTC_heating_rq_lockVal = 0;
+}
+static void uds_hvOffCmdCtrlExit(uint32_t dt)
+{
+	(void)dt;
+	hld_HV_Off_flag = 0;
+}
+
+static uint8_t uds_fanCtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt & 0x1)
+	{
+		hld_po_fan_CONTROL_lock = 1;
+		hld_po_fan_CONTROL_lockVal = 93;
+	}
+	else
+	{
+		hld_po_fan_CONTROL_lock = 1;
+		hld_po_fan_CONTROL_lockVal = 7;
+	}
+
+	return nrspCode;
+}
+
+static uint8_t uds_waterPump1CtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt & 0x1)
+	{
+		hld_po_pump1_CONTROL_lock = 1;
+		hld_po_pump1_CONTROL_lockVal = 97;
+	}
+	else
+	{
+		hld_po_pump1_CONTROL_lock = 1;
+		hld_po_pump1_CONTROL_lockVal = 10;
+	}
+
+	return nrspCode;
+}
+
+static uint8_t uds_waterPump2CtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt & 0x1)
+	{
+		hld_po_pump2_CONTROL_lock = 1;
+		hld_po_pump2_CONTROL_lockVal = 97;
+	}
+	else
+	{
+		hld_po_pump2_CONTROL_lock = 1;
+		hld_po_pump2_CONTROL_lockVal = 10;
+	}
+
+	return nrspCode;
+}
+
+static uint8_t uds_waterPump3CtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt & 0x1)
+	{
+		hld_po_pump3_CONTROL_lock = 1;
+		hld_po_pump3_CONTROL_lockVal = 97;
+	}
+	else
+	{
+		hld_po_pump3_CONTROL_lock = 1;
+		hld_po_pump3_CONTROL_lockVal = 10;
+	}
+
+	return nrspCode;
+}
+
+static uint8_t uds_way3SoleCtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt == 0x00)
+	{
+		lin_vcu_VALVE3_DATA1_lock = 1;
+		lin_vcu_VALVE3_DATA1_lockVal = 7;
+	}
+	else if(reqdt == 0x03)
+	{
+		lin_vcu_VALVE3_DATA1_lock = 1;
+		lin_vcu_VALVE3_DATA1_lockVal = 247;
+	}
+	else
+	{
+		nrspCode = nrsp_subFunctionNotSupported;
+	}
+
+	return nrspCode;
+}
+
+static uint8_t uds_way4SoleCtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt == 0x00)
+	{
+		lin_vcu_VALVE4_DATA1_lock = 1;
+		lin_vcu_VALVE4_DATA1_lockVal = 7;
+	}
+	else if(reqdt == 0x03)
+	{
+		lin_vcu_VALVE4_DATA1_lock = 1;
+		lin_vcu_VALVE4_DATA1_lockVal = 247;
+	}
+	else
+	{
+		nrspCode = nrsp_subFunctionNotSupported;
+	}
+
+	return nrspCode;
+}
+
+static uint8_t uds_battPTCCtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt & 0x01)
+	{
+		switch(reqdt)
+		{
+			case 0x03:
+			{
+				lin_vcu_PTC_On_Rq_lock = 1;
+				lin_vcu_PTC_On_Rq_lockVal = 1;
+				lin_vcu_PTC_heating_rq_lockVal = 100;
+			}
+			break;
+			case 0x05:
+			{
+				lin_vcu_PTC_On_Rq_lock = 1;
+				lin_vcu_PTC_On_Rq_lockVal = 1;
+				lin_vcu_PTC_heating_rq_lockVal = 80;
+			}
+			break;
+			case 0x09:
+			{
+				lin_vcu_PTC_On_Rq_lock = 1;
+				lin_vcu_PTC_On_Rq_lockVal = 1;
+				lin_vcu_PTC_heating_rq_lockVal = 60;
+			}
+			break;
+			case 0x11:
+			{
+				lin_vcu_PTC_On_Rq_lock = 1;
+				lin_vcu_PTC_On_Rq_lockVal = 1;
+				lin_vcu_PTC_heating_rq_lockVal = 40;
+			}
+			break;
+			case 0x21:
+			{
+				lin_vcu_PTC_On_Rq_lock = 1;
+				lin_vcu_PTC_On_Rq_lockVal = 1;
+				lin_vcu_PTC_heating_rq_lockVal = 20;
+			}
+			break;
+			default:
+				nrspCode = nrsp_subFunctionNotSupported;
+			break;
+		}
+	}
+	else
+	{
+		lin_vcu_PTC_On_Rq_lock = 1;
+		lin_vcu_PTC_On_Rq_lockVal = 0;
+		lin_vcu_PTC_heating_rq_lockVal = 0;
+	}
 
 
+	return nrspCode;
+}
 
+static uint8_t uds_hvOffCmdCtrlHandle(void* ctrlReq)
+{
+	uint8_t nrspCode = nrsp_positiveResponse;
+	uint8_t reqdt = *((uint8_t*)ctrlReq);
+	if(reqdt & 0x02)
+	{
+		hld_HV_Off_flag = 1;
+	}
+	else
+	{
+		hld_HV_Off_flag = 0;
+	}
+
+	return nrspCode;
+}
 /*end IO control parameters*/
 
 
@@ -189,6 +446,29 @@ const udsIoCtrlCfg_t udsIoCtrlCfg[udsIoCtrl_itemCnt] =
 */
 void uds_sessionTimeout(void)
 {
+	uds_fanCtrlExit(0);
+	uds_waterPump1CtrlExit(0);
+	uds_waterPump2CtrlExit(0);
+	uds_waterPump3CtrlExit(0);
+	uds_way3SoleCtrlExit(0);
+	uds_way4SoleCtrlExit(0);
+	uds_battPTCCtrlExit(0);
+	uds_hvOffCmdCtrlExit(0);
+}
+
+void uds_clearDefSession(void)
+{
+	uds_fanCtrlExit(0);
+	uds_waterPump1CtrlExit(0);
+	uds_waterPump2CtrlExit(0);
+	uds_waterPump3CtrlExit(0);
+	uds_way3SoleCtrlExit(0);
+	uds_way4SoleCtrlExit(0);
+	uds_battPTCCtrlExit(0);
+	uds_hvOffCmdCtrlExit(0);
+
+	hcan_setILMode(0,0xFF,1);
+	hcan_setILMode(2,0xFF,1);
 }
 /* ----------------- End UDS basic support callback functions -------- */
 
@@ -229,9 +509,12 @@ uint8_t uds_sessionSwitch(uint8_t actSession, uint8_t tragetSession)
 		/* Switch support check */
 	    switch(swMask)
 	    {
+	    	case ssSwitch_stdTostd:
 	        case ssSwitch_stdToExt:
 	        case ssSwitch_extToStd:
 	        case ssSwitch_progToStd:
+	        case ssSwitch_extToext:
+	        case ssSwitch_progToSprog:
 	            nrspCode = nrsp_positiveResponse; /* Accept switch */
 	            break;
 	        case ssSwitch_extToProg:
@@ -249,9 +532,15 @@ uint8_t uds_sessionSwitch(uint8_t actSession, uint8_t tragetSession)
 				}
 	            
 	            break;
+	        case ssSwitch_progToExt:
+	        case ssSwitch_stdToProg://by liujian 20201015
+	        {
+	        	nrspCode = nrsp_conditionsNotCorrect; /* NOT Accept switch */
+	        }
+	        break;
 	        default:
-	            //nrspCode = nrsp_subFunctionNotSupportedInActiveSession; /* Not supported switch */
-	            nrspCode = nrsp_positiveResponse;
+	            nrspCode = nrsp_subFunctionNotSupportedInActiveSession; /* Not supported switch */
+	            //nrspCode = nrsp_positiveResponse;
 	            break;
 	    }
 	}
@@ -309,25 +598,19 @@ void uds_saUpdateSeed(uint8_t saLevel)
 */
 uint8_t uds_saCheckKey(uint8_t saLevel)
 {
-	uint8_t nrspCode =  nrsp_positiveResponse;
-	uint8_t keyByteIndx = 0;
-	uint32_t seed = 0;
+	uint8_t checkResult =  FALSE;
 	uint32_t remotekey = 0;
 	uint32_t localkey = 0;
 	uint8_t salevelCAL[4];
 	uint8_t keyBuf[4];
-	char sa_i;
+	uint8_t sa_i;
 
 	switch(saLevel)
 	{
 		case saLv_fbl_lvl:
 			if(TRUE != uds_saLevelUnlockCheckByIndex(saLvSpt_fbl)) /* is in unlock state */
 			{
-				if(saLevelMap[saLvSpt_fbl].keyLen!= uds_remainRequestDLC())
-				{
-					nrspCode = nrsp_invalidKey;
-				}
-				else
+				if(saLevelMap[saLvSpt_fbl].keyLen == uds_remainRequestDLC())
 				{
 					for(sa_i = 0;sa_i < saLevelMap[saLvSpt_fbl].keyLen;sa_i++)
 					{
@@ -347,10 +630,7 @@ uint8_t uds_saCheckKey(uint8_t saLevel)
 					keyBuf[3] = (salevelCAL[3]&0xf)|((salevelCAL[0]&0xf0)>>4);
 					localkey = *((uint32_t *)keyBuf);
 
-					if(TRUE != uds_seedKeyMatchCheck(localkey,remotekey))
-					{
-						nrspCode = nrsp_invalidKey;
-					}
+					checkResult= uds_seedKeyMatchCheck(localkey,remotekey);
 				}
 			}
 			else
@@ -360,40 +640,13 @@ uint8_t uds_saCheckKey(uint8_t saLevel)
 			
 			break;
 		case saLv_cali_lvl:
-			if(TRUE != uds_saLevelUnlockCheckByIndex(saLvSpt_cali)) /* is in unlock state */
-			{
-				if(saLevelMap[saLvSpt_cali].keyLen!= uds_remainRequestDLC())
-				{
-					nrspCode = nrsp_invalidKey;
-				}
-				else
-				{
-					while(keyByteIndx < saLevelMap[saLvSpt_cali].keyLen)
-					{
-						saLevelMap[saLvSpt_cali].keyBuf[keyByteIndx ++] = uds_popRequestData(0x00);
-					}
-					seed = *((uint32_t *)saLevelMap[saLvSpt_cali].seedBuf);
-					remotekey = *((uint32_t *)saLevelMap[saLvSpt_cali].keyBuf);
-					if(TRUE != uds_seedKeyMatchCheck(seed,remotekey))
-					{
-						nrspCode = nrsp_invalidKey;
-					}
-				}
-			}
-			else
-			{
-				/*already in unlocked state, any key check is considered as pass*/
-			}
-			break;
+
+		break;
 		case saLv_lvl1_lvl:
 		{
 			if(TRUE != uds_saLevelUnlockCheckByIndex(saLvSpt_lvl1)) /* is in unlock state */
 			{
-				if(saLevelMap[saLvSpt_lvl1].keyLen!= uds_remainRequestDLC())
-				{
-					nrspCode = nrsp_invalidKey;
-				}
-				else
+				if(saLevelMap[saLvSpt_lvl1].keyLen == uds_remainRequestDLC())
 				{
 					for(sa_i = 0;sa_i < saLevelMap[saLvSpt_lvl1].keyLen;sa_i++)
 					{
@@ -413,10 +666,7 @@ uint8_t uds_saCheckKey(uint8_t saLevel)
 					keyBuf[3] = ((salevelCAL[3]&0xf)<<4)|(salevelCAL[0]&0xf);
 					localkey = *((uint32_t *)keyBuf);
 
-					if(TRUE != uds_seedKeyMatchCheck(localkey,remotekey))
-					{
-						nrspCode = nrsp_invalidKey;
-					}
+					checkResult= uds_seedKeyMatchCheck(localkey,remotekey);
 				}
 			}
 			else
@@ -426,10 +676,10 @@ uint8_t uds_saCheckKey(uint8_t saLevel)
 		}
 		break;
 		default:
-			nrspCode = nrsp_subFunctionNotSupported;
-			break;
+		break;
 	}
-    return nrspCode; 
+
+    return checkResult;
 }
 
 /*
@@ -471,6 +721,36 @@ bool uds_ioCtrlAllowed(void)
 }
 
 
+bool uds_28serviceAllowed(void)
+{
+	bool allowed = FALSE;
+	uint32_t sysvolt = get_sysVolt();
+	uint32_t vehispeed = get_vehicleSpeed();
+	uint32_t acgear = get_actualGear();
+
+	if(((sysvolt >= 9) && (sysvolt <= 16)) \
+		&& ((0 == acgear) || (2 == acgear)) && (vehispeed == 0))
+	{
+		allowed = TRUE;
+	}
+	return allowed;
+}
+
+bool uds_31serviceAllowed(void)
+{
+	bool allowed = FALSE;
+	uint32_t sysvolt = get_sysVolt();
+	uint32_t vehispeed = get_vehicleSpeed();
+	uint32_t acgear = get_actualGear();
+
+	if(((sysvolt >= 9) && (sysvolt <= 16)) \
+		&& ((0 == acgear) || (2 == acgear)) && (vehispeed == 0))
+	{
+		allowed = TRUE;
+	}
+	return allowed;
+}
+
 /* ------------------- --------------- End UDS pre-set service support callback functions ---------------------------------- */
 
 /* -------------- user addition functions, macros, variables define ------------- */
@@ -503,6 +783,32 @@ static uint8_t uds_getSaLvIndex(uint8_t saLevel)
     return saLv_i;
 }
 
+static uint8_t uds_programConditionCheck(void)
+{
+	uint8_t checkresult = 0;
+	uint8_t nrspCode = nrsp_positiveResponse;
+    /* support session check */
+    if (uds_getActiveSession() != sessionType_ext)
+    {
+    	checkresult = 1;
+        /* not in program session, set negative response flag */
+        nrspCode = nrsp_subFunctionNotSupportedInActiveSession;
+    }
+    else
+    {
+    	//vhilcle speed,P gear
+    	if((0 != cod_vcu_vehicleSpeed)
+    			|| (0 != cod_vcu_gear))
+    	{
+    	//	checkresult = 1;
+    	}
+    }
+
+	uds_pushRspData(checkresult);
+
+	return nrspCode;
+};
+
 
 static bool uds_seedKeyMatchCheck(uint32_t seed,uint32_t key)
 {
@@ -510,7 +816,7 @@ static bool uds_seedKeyMatchCheck(uint32_t seed,uint32_t key)
 	return ((seed == key)?(TRUE):(FALSE));
 }
 
-
+#if 0
 static uint8_t uds_testRotutineStart(void)
 {
 	uint8_t nrspCode = 	nrsp_positiveResponse;
@@ -528,8 +834,11 @@ static uint8_t uds_testRotutineQuery(void)
 	uint8_t nrspCode = 	nrsp_positiveResponse;
 	return nrspCode;
 };
-
+#endif
 
 /* -------------- End user addition functions, macros, variables define --------- */
+
+
+
 
 
