@@ -20,12 +20,12 @@
 #include "didCfg_Var.h"
 #include "didCfg_import.h"
 #include "didCfg_export.h"
-
+#include "VCU_private.h"
+#include "VCU.h"
 /*-----------------------------------------------------------------------------
                    		Module local defines and constants
 ------------------------------------------------------------------------------*/
-
-
+#define BIGANDSMALLCOVERSION_BIT16(x)	(((x&0x00ff) << 8) | (x&0xff00) >> 8)
 /*------------------------------------------------------------------------------
                                  Module local types
 ------------------------------------------------------------------------------*/
@@ -33,12 +33,10 @@
 /*------------------------------------------------------------------------------
                                 Local data at RAM
 ------------------------------------------------------------------------------*/
-static hs_u1_t did_vin[17];
-
 static hs_u1_t uds_snap_BattVolt;
 static hs_u2_t uds_snap_VehiSpeed;
-static hs_u2_t uds_snap_FrontMtrSpeed;
-static hs_u2_t uds_snap_rearMtrSpeed;
+static short int uds_snap_FrontMtrSpeed;
+static short int uds_snap_rearMtrSpeed;
 static hs_u2_t uds_snap_HVBattVolt;
 static hs_u2_t uds_snap_HVBattCurr;
 static hs_u1_t uds_snap_HVPUpDownSt;
@@ -46,8 +44,8 @@ static hs_u1_t uds_snap_AcutalGear;
 static hs_u1_t uds_snap_AccPedalPos;
 static hs_u1_t uds_snap_BrakePedalPressSign;
 static hs_u2_t uds_snap_EngTorque;
-static hs_u2_t uds_snap_FrontMtrTorque;
-static hs_u2_t uds_snap_RearMtrTorque;
+static short int uds_snap_FrontMtrTorque;
+static short int uds_snap_RearMtrTorque;
 static hs_u1_t uds_snap_FanSpeedPercentage;
 static hs_u1_t uds_snap_Pump1SpeedPercentage;
 static hs_u1_t uds_snap_Pump2SpeedPercentage;
@@ -55,6 +53,7 @@ static hs_u1_t uds_snap_Pump3SpeedPercentage;
 static hs_u1_t uds_snap_3wayPosPercentage;
 static hs_u1_t uds_snap_4wayPosPercentage;
 static hs_u1_t uds_snap_HVBattSoc;
+static hs_u1_t uds_did_fingerPrint[DIDCFG_FINGERPRINT_LNG];
 /*------------------------------------------------------------------------------
                                 Global data at RAM
 ------------------------------------------------------------------------------*/
@@ -64,27 +63,28 @@ static hs_u1_t uds_snap_HVBattSoc;
                          Declaration of local functions
 ------------------------------------------------------------------------------*/
 static void uds_0xF190_writeCb(void);
-
+static void uds_0xF010_writeCb(void);
 static void uds_0xCF00_readCb(void);
 static void uds_0xCF01_readCb(void);
-static void uds_0xCF03_readCb(void);
-static void uds_0xCF04_readCb(void);
-static void uds_0xCF06_readCb(void);
-static void uds_0xCF07_readCb(void);
-static void uds_0xCF08_readCb(void);
-static void uds_0xCF09_readCb(void);
-static void uds_0xCF0A_readCb(void);
-static void uds_0xCF0B_readCb(void);
-static void uds_0xCF0C_readCb(void);
-static void uds_0xCF0D_readCb(void);
-static void uds_0xCF0E_readCb(void);
-static void uds_0xCF12_readCb(void);
-static void uds_0xCF13_readCb(void);
-static void uds_0xCF14_readCb(void);
-static void uds_0xCF15_readCb(void);
-static void uds_0xCF16_readCb(void);
-static void uds_0xCF17_readCb(void);
-static void uds_0xCF18_readCb(void);
+static void uds_0x0A00_readCb(void);
+static void uds_0x0A01_readCb(void);
+static void uds_0x0A02_readCb(void);
+static void uds_0x0A03_readCb(void);
+static void uds_0x0A17_readCb(void);
+static void uds_0x0A04_readCb(void);
+static void uds_0x0A05_readCb(void);
+static void uds_0x0A06_readCb(void);
+static void uds_0x0A07_readCb(void);
+static void uds_0x0A08_readCb(void);
+static void uds_0x0A09_readCb(void);
+static void uds_0x0A10_readCb(void);
+static void uds_0x0A11_readCb(void);
+static void uds_0x0A12_readCb(void);
+static void uds_0x0A13_readCb(void);
+static void uds_0x0A14_readCb(void);
+static void uds_0x0A15_readCb(void);
+static void uds_0x0A16_readCb(void);
+static void uds_0xF184_readCb(void);
 /*------------------------------------------------------------------------------
                                 Local data at ROM
 ------------------------------------------------------------------------------*/
@@ -104,45 +104,72 @@ const hs_u2_t uds_snapCnt = UDS_SNAP_CNT;
 ------------------------------------------------------------------------------*/
 const uds_didRdCfg_t uds_didRdCfgGrp[UDS_DID_RD_CNT]=
 {
+	{0xF184,DIDCFG_FINGERPRINT_LNG,(void *)uds_did_fingerPrint,0x00,uds_0xF184_readCb},
     {0xF189,DIDCFG_SOFT_VAR_LNG,(void *)DF_softwareVar,0x00,NULL},
-    {0xF195,DIDCFG_SOFT_VAR_LNG,(void *)DF_softwareVar,0x00,NULL},
     {0xF187,DIDCFG_PORT_NUM_LNG,(void *)port_numbers,0x00,NULL},
-    {0xF089,DIDCFG_HARD_VAR_LNG,(void *)&DF_hardwareVar,0x00,NULL},
-    {0xF18A,DIDCFG_SUPPLIER_NAME_LNG,(void *)&DFHS_supplierName,0x00,NULL},
-    {0xF197,DIDCFG_ECU_NAME_LNG,(void *)&DFHS_ECUName,0x00,NULL},
-    {0xF193,DIDCFG_SUPR_HARD_VAR_LNG,(void *)&DFHS_supplierHardVar,0x00,NULL},
-    {0xF195,DIDCFG_SUPR_SOFT_VAR_LNG,(void *)&DFHS_supplierSoftVar,0x00,NULL},
-    {0xF180,DIDCFG_BOOTLOADER_VAR_LNG,(void *)&DFHS_BootLoaderVar,0x00,NULL},
-	{0xF010,DIDCFG_EOL_DTID_LNG,(void *)&DFHS_EOLDtID,0x00,NULL},
+    {0xF089,DIDCFG_HARD_VAR_LNG,(void *)DF_hardwareVar,0x00,NULL},
+    {0xF18A,DIDCFG_SUPPLIER_NAME_LNG,(void *)DFHS_supplierName,0x00,NULL},
+    {0xF197,DIDCFG_ECU_NAME_LNG,(void *)DFHS_ECUName,0x00,NULL},
+    {0xF193,DIDCFG_SUPR_SOFT_VAR_LNG,(void *)releasePjtVersion,0x00,NULL},
+    {0xF195,DIDCFG_SOFT_VAR_LNG,(void *)DF_softwareVar,0x00,NULL},
+    {0xF180,DIDCFG_BOOTLOADER_VAR_LNG,(void *)DFHS_BootLoaderVar,0x00,NULL},
+	{0xF010,DIDCFG_EOL_DTID_LNG,(void *)DFHS_EOLDtID,0x00,NULL},
+	{0xFB95,20,(void *)0x00fa0010,0x00,NULL},
+	{0xF190,DIDCFG_VIN_LNG,(void *)did_vin,0x00,NULL},
+
+    {0xCF00,	1,	(void *)&uds_snap_BattVolt,	0x00,	uds_0xCF00_readCb},
+    {0xCF01,	2,	(void *)&uds_snap_VehiSpeed,	0x00,	uds_0xCF01_readCb},
+    {0x0A00,	2,	(void *)&uds_snap_FrontMtrSpeed,	0x00,	uds_0x0A00_readCb},
+    {0x0A01,	2,	(void *)&uds_snap_rearMtrSpeed,	0x00,	uds_0x0A01_readCb},
+    {0x0A02,	2,	(void *)&uds_snap_HVBattVolt,	0x00,	uds_0x0A02_readCb},
+    {0x0A03,	2,	(void *)&uds_snap_HVBattCurr,	0x00,	uds_0x0A03_readCb},
+	{0x0A17,	1,	(void *)&uds_snap_HVBattSoc,	0x00,	uds_0x0A17_readCb},
+    {0x0A04,	1,	(void *)&uds_snap_HVPUpDownSt,	0x00,	uds_0x0A04_readCb},
+    {0x0A05,	1,	(void *)&uds_snap_AcutalGear,	0x00,	uds_0x0A05_readCb},
+    {0x0A06,	1,	(void *)&uds_snap_AccPedalPos,	0x00,	uds_0x0A06_readCb},
+    {0x0A07,	1,	(void *)&uds_snap_BrakePedalPressSign,	0x00,	uds_0x0A07_readCb},
+    {0x0A08,	2,	(void *)&uds_snap_EngTorque,	0x00,	uds_0x0A08_readCb},
+    {0x0A09,	2,	(void *)&uds_snap_FrontMtrTorque,	0x00,	uds_0x0A09_readCb},
+    {0x0A10,	2,	(void *)&uds_snap_RearMtrTorque,	0x00,	uds_0x0A10_readCb},
+	{0x0A11,	1,	(void *)&uds_snap_FanSpeedPercentage,	0x00,	uds_0x0A11_readCb},
+    {0x0A12,	1,	(void *)&uds_snap_Pump1SpeedPercentage,	0x00,	uds_0x0A12_readCb},
+    {0x0A13,	1,	(void *)&uds_snap_Pump2SpeedPercentage,	0x00,	uds_0x0A13_readCb},
+    {0x0A14,	1,	(void *)&uds_snap_Pump3SpeedPercentage,	0x00,	uds_0x0A14_readCb},
+    {0x0A15,	1,	(void *)&uds_snap_3wayPosPercentage,	0x00,	uds_0x0A15_readCb},
+    {0x0A16,	1,	(void *)&uds_snap_4wayPosPercentage,	0x00,	uds_0x0A16_readCb},
+
 };
 
 const uds_didWtCfg_t uds_didWtCfgGrp[UDS_DID_WR_CNT]=
 {
     {0xF190,DIDCFG_VIN_LNG,did_vin,GLOBAL_SA_LVL1,uds_0xF190_writeCb},
+	{0xF010,DIDCFG_EOL_DTID_LNG,DFHS_EOLDtID,GLOBAL_SA_LVL1,uds_0xF010_writeCb},
 };
 
 const uds_didRdCfg_t uds_snapListCfgGrp[UDS_SNAP_CNT]=
 {
     {0xCF00,	1,	(void *)&uds_snap_BattVolt,	0x00,	uds_0xCF00_readCb},
     {0xCF01,	2,	(void *)&uds_snap_VehiSpeed,	0x00,	uds_0xCF01_readCb},
-    {0xCF03,	2,	(void *)&uds_snap_FrontMtrSpeed,	0x00,	uds_0xCF03_readCb},
-    {0xCF04,	2,	(void *)&uds_snap_rearMtrSpeed,	0x00,	uds_0xCF04_readCb},
-    {0xCF06,	2,	(void *)&uds_snap_HVBattVolt,	0x00,	uds_0xCF06_readCb},
-    {0xCF07,	2,	(void *)&uds_snap_HVBattCurr,	0x00,	uds_0xCF07_readCb},
-    {0xCF08,	1,	(void *)&uds_snap_HVPUpDownSt,	0x00,	uds_0xCF08_readCb},
-    {0xCF09,	1,	(void *)&uds_snap_AcutalGear,	0x00,	uds_0xCF09_readCb},
-    {0xCF0A,	1,	(void *)&uds_snap_AccPedalPos,	0x00,	uds_0xCF0A_readCb},
-    {0xCF0B,	1,	(void *)&uds_snap_BrakePedalPressSign,	0x00,	uds_0xCF0B_readCb},
-    {0xCF0C,	2,	(void *)&uds_snap_EngTorque,	0x00,	uds_0xCF0C_readCb},
-    {0xCF0D,	2,	(void *)&uds_snap_FrontMtrTorque,	0x00,	uds_0xCF0D_readCb},
-    {0xCF0E,	2,	(void *)&uds_snap_RearMtrTorque,	0x00,	uds_0xCF0E_readCb},
-    {0xCF12,	1,	(void *)&uds_snap_FanSpeedPercentage,	0x00,	uds_0xCF12_readCb},
-    {0xCF13,	1,	(void *)&uds_snap_Pump1SpeedPercentage,	0x00,	uds_0xCF13_readCb},
-    {0xCF14,	1,	(void *)&uds_snap_Pump2SpeedPercentage,	0x00,	uds_0xCF14_readCb},
-    {0xCF15,	1,	(void *)&uds_snap_Pump3SpeedPercentage,	0x00,	uds_0xCF15_readCb},
-    {0xCF16,	1,	(void *)&uds_snap_3wayPosPercentage,	0x00,	uds_0xCF16_readCb},
-    {0xCF17,	1,	(void *)&uds_snap_4wayPosPercentage,	0x00,	uds_0xCF17_readCb},
-    {0xCF18,	1,	(void *)&uds_snap_HVBattSoc,	0x00,	uds_0xCF18_readCb},
+    {0x0A00,	2,	(void *)&uds_snap_FrontMtrSpeed,	0x00,	uds_0x0A00_readCb},
+    {0x0A01,	2,	(void *)&uds_snap_rearMtrSpeed,	0x00,	uds_0x0A01_readCb},
+    {0x0A02,	2,	(void *)&uds_snap_HVBattVolt,	0x00,	uds_0x0A02_readCb},
+    {0x0A03,	2,	(void *)&uds_snap_HVBattCurr,	0x00,	uds_0x0A03_readCb},
+	{0x0A17,	1,	(void *)&uds_snap_HVBattSoc,	0x00,	uds_0x0A17_readCb},
+    {0x0A04,	1,	(void *)&uds_snap_HVPUpDownSt,	0x00,	uds_0x0A04_readCb},
+    {0x0A05,	1,	(void *)&uds_snap_AcutalGear,	0x00,	uds_0x0A05_readCb},
+    {0x0A06,	1,	(void *)&uds_snap_AccPedalPos,	0x00,	uds_0x0A06_readCb},
+    {0x0A07,	1,	(void *)&uds_snap_BrakePedalPressSign,	0x00,	uds_0x0A07_readCb},
+    //{0x0A08,	2,	(void *)&uds_snap_EngTorque,	0x00,	uds_0x0A08_readCb},
+    {0x0A09,	2,	(void *)&uds_snap_FrontMtrTorque,	0x00,	uds_0x0A09_readCb},
+    {0x0A10,	2,	(void *)&uds_snap_RearMtrTorque,	0x00,	uds_0x0A10_readCb},
+#if 0
+	{0x0A11,	1,	(void *)&uds_snap_FanSpeedPercentage,	0x00,	uds_0x0A11_readCb},
+    {0x0A12,	1,	(void *)&uds_snap_Pump1SpeedPercentage,	0x00,	uds_0x0A12_readCb},
+    {0x0A13,	1,	(void *)&uds_snap_Pump2SpeedPercentage,	0x00,	uds_0x0A13_readCb},
+    {0x0A14,	1,	(void *)&uds_snap_Pump3SpeedPercentage,	0x00,	uds_0x0A14_readCb},
+    {0x0A15,	1,	(void *)&uds_snap_3wayPosPercentage,	0x00,	uds_0x0A15_readCb},
+    {0x0A16,	1,	(void *)&uds_snap_4wayPosPercentage,	0x00,	uds_0x0A16_readCb},
+#endif
 };
 
 /*------------------------------------------------------------------------------
@@ -160,122 +187,168 @@ const uds_didRdCfg_t uds_snapListCfgGrp[UDS_SNAP_CNT]=
                       Implementation of local functions
 ------------------------------------------------------------------------------*/
 
+static void uds_0xF184_readCb(void)
+{
+    /*add you code here to realize this interface*/
+	MemIf_ReadEE(4,uds_did_fingerPrint,DIDCFG_FINGERPRINT_LNG);
+}
+
 static void uds_0xF190_writeCb(void)
 {
     /*add you code here to realize this interface*/
-	(void)MemIf_WriteEE(5,did_vin,DIDCFG_VIN_LNG,1);
+	//(void)MemIf_WriteEE(5,did_vin,DIDCFG_VIN_LNG,1);
+	uds_rspPending();
+	MemIf_udsStoreImmediately();
+}
+
+static void uds_0xF010_writeCb(void)
+{
+    /*add you code here to realize this interface*/
+	EOL_drivingMode = DFHS_EOLDtID[0] & 0x03;
+	EOL_cruideMode = DFHS_EOLDtID[1] & 0x03;
+	uds_rspPending();
+	MemIf_udsStoreImmediately();
 }
 
 
 static void uds_0xCF00_readCb(void)
 {
     /*add you code here to realize this interface*/
-	//uds_snap_BattVolt = ;
+	uds_snap_BattVolt = LoBattVolt;
 }
 
 static void uds_0xCF01_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	hs_u2_t dttemp;
+	dttemp = cod_vcu_vehicleSpeed;
+	uds_snap_VehiSpeed = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
 
-static void uds_0xCF03_readCb(void)
+static void uds_0x0A00_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	short int dttemp;
+	dttemp = mcuf0_speed;
+	uds_snap_FrontMtrSpeed = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
 
-static void uds_0xCF04_readCb(void)
+static void uds_0x0A01_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	short int dttemp;
+	dttemp = mcur0_speed;
+	uds_snap_rearMtrSpeed = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
-
-static void uds_0xCF06_readCb(void)
+static void uds_0x0A02_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	hs_u2_t dttemp;
+	dttemp = bms_vPackBms;
+	uds_snap_HVBattVolt = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
-
-static void uds_0xCF07_readCb(void)
+static void uds_0x0A03_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	hs_u2_t dttemp;
+	dttemp = bms_iPack;
+	uds_snap_HVBattCurr = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
 
-
-static void uds_0xCF08_readCb(void)
+static void uds_0x0A17_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_HVBattSoc = bms_SOC;
 }
 
-static void uds_0xCF09_readCb(void)
+
+static void uds_0x0A04_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_HVPUpDownSt = cod_vcu_highVoltageIndicator;
 }
 
-static void uds_0xCF0A_readCb(void)
+static void uds_0x0A05_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_AcutalGear = cod_vcu_actualGear;
 }
-static void uds_0xCF0B_readCb(void)
+
+static void uds_0x0A06_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_AccPedalPos = cod_vcu_accPedalPos;
 }
-static void uds_0xCF0C_readCb(void)
+static void uds_0x0A07_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_BrakePedalPressSign = cod_vcu_brakePedalPressed;
 }
-static void uds_0xCF0D_readCb(void)
+static void uds_0x0A08_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_EngTorque = 0;
 }
-static void uds_0xCF0E_readCb(void)
+static void uds_0x0A09_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	short int dttemp;
+	dttemp = mcuf0_torqueCmdEcho;
+	uds_snap_FrontMtrTorque = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
-static void uds_0xCF12_readCb(void)
+static void uds_0x0A10_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	short int dttemp;
+	dttemp = mcur0_torqueCmdEcho;
+	uds_snap_RearMtrTorque = BIGANDSMALLCOVERSION_BIT16(dttemp);
 }
-static void uds_0xCF13_readCb(void)
+static void uds_0x0A11_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_FanSpeedPercentage = (hs_u1_t)(((float)get_icpwm_dutyCycle(0))/100 + 0.5);
 }
-static void uds_0xCF14_readCb(void)
+static void uds_0x0A12_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_Pump1SpeedPercentage = (hs_u1_t)(((float)get_icpwm_dutyCycle(1))/100 + 0.5);
 }
-static void uds_0xCF15_readCb(void)
+static void uds_0x0A13_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_Pump2SpeedPercentage = (hs_u1_t)(((float)get_icpwm_dutyCycle(2))/100 + 0.5);
 }
-static void uds_0xCF16_readCb(void)
+static void uds_0x0A14_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_Pump3SpeedPercentage = (hs_u1_t)(((float)get_icpwm_dutyCycle(3))/100 + 0.5);
 }
-static void uds_0xCF17_readCb(void)
+static void uds_0x0A15_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_3wayPosPercentage = valve3_RespDATA1;
 }
-static void uds_0xCF18_readCb(void)
+static void uds_0x0A16_readCb(void)
 {
     /*add you code here to realize this interface*/
-
+	uds_snap_4wayPosPercentage = valve4_RespDATA1;
 }
+
+uint8_t udsCfg_readDrivingMode(void)
+{
+	uint8_t resVal;
+	resVal = DFHS_EOLDtID[0] & 0x03;
+	return resVal;
+}
+
+uint8_t udsCfg_readCruiseMode(void)
+{
+	uint8_t resVal;
+	resVal = DFHS_EOLDtID[1] & 0x03;
+	return resVal;
+}
+
+
 /* ---- Source switch off ---------------------------------------------------- */
 
 /*--- End of file ------------------------------------------------------------*/
