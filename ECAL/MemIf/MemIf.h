@@ -45,7 +45,8 @@ description鑼傚綍function External declaration
 *******************************************************/
 extern void MemIf_Init(void);
 extern void MemIf_mainFunction(void);
+extern void MemIf_udsStoreImmediately(void);
 extern uint8_t MemIf_ReadEE(uint8_t Le_u_Object,uint8_t* Le_u_Data,uint8_t Le_u_Lng);
-extern uint8_t MemIf_WriteEE(uint8_t Le_u_Object,uint8_t* Le_u_Data,uint8_t Le_u_Lng);
+extern uint8_t MemIf_WriteEE(uint8_t Le_u_Object,uint8_t* Le_u_Data,uint8_t Le_u_Lng,uint8_t imWrFlag);
 extern uint8_t MemIf_needRenewSt(void);
 #endif
