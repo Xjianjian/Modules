@@ -1,4 +1,12 @@
-
+/*
+* Copyright (c) 2016, SHENZHEN HANGSHENG ELECTRONICS Co.,Ltd.
+* All Rights Reserved.
+* Dept.: Software Department
+* File: flash.h
+* Description: 
+* History: 
+* 2016-6-5, 1007040, original
+*/
 
 #ifndef __FLASH_H__
 #define __FLASH_H__
