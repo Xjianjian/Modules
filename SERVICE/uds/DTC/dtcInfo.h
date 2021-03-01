@@ -18,6 +18,7 @@
 ------------------------------------------------------------------------------*/
 #include "hs_types.h"
 #include "didCfg_export.h"
+#include "didcfg_var.h"
 /*------------------------------------------------------------------------------
                              Defines and constants
 ------------------------------------------------------------------------------*/
@@ -27,12 +28,12 @@
 #define m_dtcPrio_high 3
 
 
-#define m_dtcInfoCnt	142
+#define m_dtcInfoCnt	149
                
 /*------------------------------------------------------------------------------
                                    Data types
 ------------------------------------------------------------------------------*/
-typedef struct
+typedef union
 {
     hs_u1_t all;
     struct
@@ -91,11 +92,15 @@ typedef struct
 /*------------------------------------------------------------------------------
                       External declaration of global RAM-Variables
 ------------------------------------------------------------------------------*/
+extern hs_u1_t __attribute__ ((section(".eeDiagDtAddr"))) vcu_TowModeSetStor;
+extern hs_u1_t __attribute__ ((section(".eeDiagDtAddr"))) did_vin[17];
+extern hs_u1_t __attribute__ ((section(".eeDiagDtAddr"))) DFHS_EOLDtID[DIDCFG_EOL_DTID_LNG];
+extern float __attribute__ ((section(".eeDiagDtAddr"))) Inital_electri_consumption;
+extern hs_u1_t __attribute__ ((section(".eeDiagDtAddr"))) uds_saInvalidAccessCnt;
+extern float __attribute__ ((section(".eeDiagDtAddr"))) Cousum_RW[11];
 extern obdDiagDt_t __attribute__ ((section(".eeDiagDtAddr"))) obdDiagDtGrp[m_dtcInfoCnt];
 extern hs_u2_t __attribute__ ((section(".eeDiagDtAddr"))) obdFFOrder[m_dtcInfoCnt];
 extern obdFFDt_t __attribute__ ((section(".eeDiagDtAddr"))) obdFFDtGrp[m_dtcInfoCnt];
-
-
 /*------------------------------------------------------------------------------
                       External declaration of global ROM-Variables
 ------------------------------------------------------------------------------*/
