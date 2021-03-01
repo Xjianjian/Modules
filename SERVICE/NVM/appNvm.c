@@ -1,4 +1,4 @@
- /*
+  /*
 * Copyright (c) File 2016-08-11,SHENZHEN HANGSHENG NEW ENERGY Co.,Ltd.
 * All Rights Reserved.
 * Dept.: Software Department
@@ -18,6 +18,7 @@
 #include "typedefs.h"
 #include "platformTypes.h"
 #include "utils.h"
+#include "nvmBlockInfo.h"
 #include "exEE25LC256.h"
 #include "eepromBlockCfg.h"
 #include "eepromHandle.h"
@@ -120,7 +121,7 @@ void anv_cyclic(void)
 	{
 		for(;blockIndx < nvmBlockCnt; blockIndx ++)
 		{
-			if((TRUE == nvmBlockInfoGrp[blockIndx].imdt) 
+			if((TRUE == nvmBlockInfoGrp[blockIndx].imdt)
 				&& (TRUE == nvmBlockDirty[blockIndx]))
 			{
 				if(TRUE == eeh_addJob(blockIndx,m_eeJob_Write,FALSE))
@@ -196,7 +197,7 @@ void anv_shutdownCyclic(void)
 	{
 		for(;blockIndx < nvmBlockCnt; blockIndx ++)
 		{
-			if((TRUE == nvmBlockDirty[blockIndx]))
+			if(TRUE == nvmBlockDirty[blockIndx])
 			{
 				if(TRUE == eeh_addJob(blockIndx,m_eeJob_Write,FALSE))
 				{
