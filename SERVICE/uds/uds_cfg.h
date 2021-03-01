@@ -70,7 +70,7 @@ typedef enum
 #define saLvSptMask_none 0x00u
 #define saLvSptMask_fbl  0x01u
 #define saLvSptMask_cali 0x02u
-#define saLvSptMask_lvl1 0x03u
+#define saLvSptMask_lvl1 0x04u
 
 typedef struct
 {
@@ -89,7 +89,7 @@ typedef struct
 #define chipMem_cnt				0x04		/*should always be less than 0xFF*/
 
 
-#define udsIoCtrl_itemCnt		1
+#define udsIoCtrl_itemCnt		8
 
 
 
@@ -144,15 +144,19 @@ extern const uint32_t saProtectDelayTime;
 
 /* ----------------------- Default set service logic function exxport ----------------------- */
 extern void uds_sessionTimeout(void);
+extern void uds_clearDefSession(void);
 extern uint8_t uds_sessionSwitch(uint8_t actSession, uint8_t tragetSession);
 extern void uds_saUpdateSeed(uint8_t saLevel);
 extern uint8_t uds_saCheckKey(uint8_t saLevel);
 extern void uds_didRwReady(void);
 extern uint8_t  uds_getMemIndx(uint32_t memory, uint16_t size);
 extern bool uds_ioCtrlAllowed(void);
+extern bool uds_28serviceAllowed(void);
+extern bool uds_31serviceAllowed(void);
 /* ----------------------- End Default set service logic function exxport ------------------- */
 
 
 #endif /*End of __UDS_CFG_H__ */
 /*--------EOF--------*/
+
 
