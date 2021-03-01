@@ -1,4 +1,14 @@
 
+/*
+* Copyright (c) 2016, SHENZHEN HANGSHENG ELECTRONICS Co.,Ltd.
+* All Rights Reserved.
+* Dept.: Software Department
+* File: flash.c
+* Description: 
+* History: 
+* 2016-6-5, 1007040, original
+*/
+
 #include "derivative.h"
 #include "typedefs.h"
 #include "platformTypes.h"
@@ -140,31 +150,45 @@ bool flash_eraseBlock(uint8_t blockIndex)
 
         /*step3. Select the block to be erasered*/
         /*the mid Flash is for EEPROM*/
-        if (blockIndex < dFlashLowBlockCnt)
-        {
-        	/* low D-Flash*/
-        	C55FMC.SEL0.B.LOWSEL = 0x01u << blockIndex;
-        }
-        else if (blockIndex < (dFlashLowBlockCnt + dFlashMidBlockCnt))
-        {
-            /* mid D-Flash */
-            C55FMC.SEL0.B.MIDSEL = 0x01u << (blockIndex - dFlashLowBlockCnt);
-        }
-        else if (blockIndex < (dFlashLowBlockCnt + dFlashMidBlockCnt + pFlashSmallBlockCnt))
-        {
-            /* small P-Flash */
-            C55FMC.SEL0.B.LOWSEL =  0x01u << (blockIndex - dFlashLowBlockCnt - dFlashMidBlockCnt + 2);
-        }
-        else if (blockIndex < (dFlashLowBlockCnt + dFlashMidBlockCnt + pFlashSmallBlockCnt + pFlashMediumBlockCnt))
-        {
-        	/* medium P-Flash*/
-        	C55FMC.SEL1.B.HIGHSEL = (1 << (blockIndex - dFlashLowBlockCnt - dFlashMidBlockCnt - pFlashSmallBlockCnt));
-        }
-        else /* here can make sure blockIndex is less than ( < ) flashBlockTotalCnt becouse above block index detect */
-        {
-        	/* large P-Flash*/
-        	C55FMC.SEL2.B.A256KSEL = (1 << (blockIndex - dFlashLowBlockCnt - dFlashMidBlockCnt - pFlashSmallBlockCnt - pFlashMediumBlockCnt));
-        }
+		if (blockIndex < dFlashLowBlockCnt)
+		{
+			/* low D-Flash*/
+			C55FMC.SEL0.B.LOWSEL = 0x01u << blockIndex;
+			C55FMC.SEL0.B.MIDSEL = 0;
+		}
+		else if (blockIndex < (dFlashLowBlockCnt + dFlashMidBlockCnt))
+		{
+			/* mid D-Flash */
+			C55FMC.SEL0.B.LOWSEL = 0;
+			C55FMC.SEL0.B.MIDSEL = 0x01u << (blockIndex - dFlashLowBlockCnt);
+		}
+		else if (blockIndex < (dFlashLowBlockCnt + dFlashMidBlockCnt + pFlashSmallBlockCnt))
+		{
+			/* small P-Flash */
+			C55FMC.SEL0.B.LOWSEL =  0x01u << (blockIndex - dFlashLowBlockCnt - dFlashMidBlockCnt + 2);
+			C55FMC.SEL0.B.MIDSEL = 0;
+			C55FMC.SEL1.B.HIGHSEL = 0;
+			C55FMC.SEL2.B.A256KSEL = 0;
+			C55FMC.SEL3.B.A256KSEL = 0;
+		}
+		else if (blockIndex < (dFlashLowBlockCnt + dFlashMidBlockCnt + pFlashSmallBlockCnt + pFlashMediumBlockCnt))
+		{
+			/* medium P-Flash*/
+			C55FMC.SEL0.B.LOWSEL = 0;
+			C55FMC.SEL0.B.MIDSEL = 0;
+			C55FMC.SEL1.B.HIGHSEL = (1 << (blockIndex - dFlashLowBlockCnt - dFlashMidBlockCnt - pFlashSmallBlockCnt));
+			C55FMC.SEL2.B.A256KSEL = 0;
+			C55FMC.SEL3.B.A256KSEL = 0;
+		}
+		else /* here can make sure blockIndex is less than ( < ) flashBlockTotalCnt becouse above block index detect */
+		{
+			/* large P-Flash*/
+			C55FMC.SEL0.B.LOWSEL = 0;
+			C55FMC.SEL0.B.MIDSEL = 0;
+			C55FMC.SEL1.B.HIGHSEL = 0;
+			C55FMC.SEL2.B.A256KSEL = (1 << (blockIndex - dFlashLowBlockCnt - dFlashMidBlockCnt - pFlashSmallBlockCnt - pFlashMediumBlockCnt));
+			C55FMC.SEL3.B.A256KSEL = 0;
+		}
 
         /*step4	. write to any address in flash block: interlock write*/
         *(unsigned int*)flashBlocksInf[blockIndex].startAddr = 0xFFFFFFFF;
@@ -392,9 +416,9 @@ bool jump2boot_copy_ram_to_ee(uint8_t * p_buf)
 {
 
 	//uint8_t * p_buf = (uint8_t *)m_dtc_dt_ram_addr;
-	uint32_t check_sum = 0;
+	//uint32_t check_sum = 0;
 	bool retval1 = FALSE;
-	bool retval2 = FALSE;
+	//bool retval2 = FALSE;
 	uint8_t write_remain_time = 3;
 #if 0
 	check_sum = util_checksum((uint8_t *)m_dtc_dt_ram_addr,m_dtc_dt_ram_dlc - 4);
