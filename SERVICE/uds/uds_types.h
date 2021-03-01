@@ -54,12 +54,15 @@ typedef struct
 #define sessionType_safetySystem 0x04 /* For e.g. airbag deployment */
 /* Session switch mask (MSB: form, LSB: to), General used */
 #define ssSwitchMask(from, to) ((((from) << 8) & 0xFF00u) | ((to) & 0x00FFu))
+#define ssSwitch_stdTostd  0x0101u
 #define ssSwitch_stdToProg 0x0102u
 #define ssSwitch_stdToExt  0x0103u
 #define ssSwitch_progToStd 0x0201u
+#define ssSwitch_progToSprog 0x0202u
 #define ssSwitch_progToExt 0x0203u
 #define ssSwitch_extToStd  0x0301u
 #define ssSwitch_extToProg 0x0302u
+#define ssSwitch_extToext  0x0303u
 /* Switch with safetySystem session */
 #define ssSwitch_stdToSafety  0x0104u
 #define ssSwitch_progToSafety 0x0204u
@@ -190,7 +193,7 @@ typedef struct
 #define rtid_eraseMemory                                (0xFF00u)
 #define rtid_checkProgrammingDependencies               (0xFF01u)
 #define rtid_eraseMirrorMemoryDTCs                      (0xFF02u)
-#define rtid_testProcess								(0x0301u)
+#define rtid_programcondCheck							(0x0203u)
 /* ------------------- End standard routine ID define ------------ */
 
 /* ------------------- HSAE pre-define routine ID ---------------- */
