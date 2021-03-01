@@ -22,10 +22,10 @@
 /*------------------------------------------------------------------------------
                              Defines and constants
 ------------------------------------------------------------------------------*/
-#define UDS_DID_RD_CNT	10
-#define UDS_DID_WR_CNT	1
+#define UDS_DID_RD_CNT	32
+#define UDS_DID_WR_CNT	2
 
-#define UDS_SNAP_CNT	20
+#define UDS_SNAP_CNT	13
 #define UDS_SNAP_TOTAL_LNG	28
 /*------------------------------------------------------------------------------
                                    Data types
@@ -67,8 +67,6 @@ extern const uds_didRdCfg_t uds_didRdCfgGrp[UDS_DID_RD_CNT];
 extern const uds_didWtCfg_t uds_didWtCfgGrp[UDS_DID_WR_CNT];
 extern const uds_didRdCfg_t uds_snapListCfgGrp[UDS_SNAP_CNT];
 
-
-
 /*------------------------------------------------------------------------------
                     External declaration of global EEPROM-Variables
 ------------------------------------------------------------------------------*/
@@ -78,7 +76,7 @@ extern const uds_didRdCfg_t uds_snapListCfgGrp[UDS_SNAP_CNT];
 /*------------------------------------------------------------------------------
                               Declaration of global functions
 ------------------------------------------------------------------------------*/
-
-
+extern uint8_t udsCfg_readDrivingMode(void);
+extern uint8_t udsCfg_readCruiseMode(void);
 #endif
 
