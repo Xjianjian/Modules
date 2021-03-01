@@ -13,9 +13,10 @@
 #include "global_var.h"
 #include "uds_cfg.h"
 #include "uds.h"
-#include "uds_user.h"
 #include "utils.h"
-
+#include "nt_export.h"
+#include "dataLink.h"
+#include "uds_user.h"
 /* ------------------- User define variables and functions for UDS ------------------ */
 
 /* User export variables */
@@ -36,7 +37,7 @@ bool networkManagerTxEnable = TRUE;
 
 bool uds_dtcSettingOn = TRUE;
 
-bool uds_prog_allow_flag = TRUE;
+bool uds_prog_allow_flag = 0;
 
 /* User private function declare */
 static void ecuResetTrig(void);
@@ -53,7 +54,7 @@ void serv_ecuReset(void)
 		switch(resetType)
 		{
 		    case servm_resetType_hardware:
-		    case servm_resetTYpe_keyOffOn:
+		    //case servm_resetTYpe_keyOffOn:
 		    case servm_resetType_software:
 		        uds_pushRspData(resetType);
 		        uds_sendResponse();
@@ -75,13 +76,21 @@ void serv_comControl(void)
 {
     uint8_t ctrlType = 0x00;
     uint8_t comType = 0x00;
+
+    if(TRUE != uds_28serviceAllowed())
+    {
+    	uds_negativeRsp(nrsp_conditionsNotCorrect);
+    	return;
+    }
+
 	if(0x02 == uds_remainRequestDLC())
 	{
 		ctrlType = uds_popRequestData(0x00);
 		comType = uds_popRequestData(0x00);
 		/* Control type check */
-		
-	    if (ctrlType <= servm_comCtrl_disableRxAndTx)
+
+	    if((ctrlType == 0) || (ctrlType == 3) || \
+	       (ctrlType == 0x80) || (ctrlType == 0x83)	)
 	    {
 	        /* Check communication type */
 	        if ((comType >= servm_comType_normal)
@@ -92,82 +101,61 @@ void serv_comControl(void)
 				switch(comType)
 				{
 					case servm_comType_normal:
-						if(0 == (ctrlType & 0x01))
+						if((ctrlType == 0x3) || (ctrlType == 0x83))
 						{
-							/*enable tx*/
-							normalTxEnable = TRUE;
+							/*disable rxtx*/
+							hcan_setILMode(0,CAN_IL_APP_SEND|CAN_IL_APP_REC,0);
+							hcan_setILMode(2,CAN_IL_APP_SEND|CAN_IL_APP_REC,0);
 						}
 						else
 						{
-							/*disable tx*/
-							normalTxEnable = FALSE;		
-						}
-						if(0 == (ctrlType & 0x02))
-						{
-							/*enable rx*/
-							normalRxEnable = TRUE;
-						}
-						else
-						{
-							/*disable rx*/
-							normalRxEnable = FALSE;		
+							/*enable rxtx*/
+							hcan_setILMode(0,CAN_IL_APP_SEND|CAN_IL_APP_REC,1);
+							hcan_setILMode(2,CAN_IL_APP_SEND|CAN_IL_APP_REC,1);
 						}
 						break;
 					case servm_comType_networkManagement:
-						if(0 == (ctrlType & 0x01))
+						if((ctrlType == 0x3) || (ctrlType == 0x83))
 						{
-							/*enable tx*/
-							networkManagerTxEnable = TRUE;
+							/*disable rxtx*/
+							autosar_dirNm_setTxRxMode(0, 0);
 						}
 						else
 						{
-							/*disble tx*/
-							networkManagerTxEnable = FALSE;		
-						}
-						if(0 == (ctrlType & 0x02))
-						{
-							/*enable rx*/
-							networkManagerRxEnable = TRUE;
-						}
-						else
-						{
-							/*disable rx*/
-							networkManagerRxEnable = FALSE;		
+							/*enable rxtx*/
+							autosar_dirNm_setTxRxMode(0, 1);
 						}
 						break;
 					case servm_comType_normalAndNm:
-						if(0 == (ctrlType & 0x01))
+						if((ctrlType == 0x3) || (ctrlType == 0x83))
 						{
-							/*enable tx*/
-							normalTxEnable = TRUE;
-							networkManagerTxEnable = TRUE;
+							/*disable rxtx*/
+							hcan_setILMode(0,CAN_IL_APP_SEND|CAN_IL_APP_REC,0);
+							hcan_setILMode(2,CAN_IL_APP_SEND|CAN_IL_APP_REC,0);
+
+							autosar_dirNm_setTxRxMode(0, 0);
 						}
 						else
 						{
-							/*disable tx*/
-							normalTxEnable = FALSE;
-							networkManagerTxEnable = FALSE;		
-						}
-						if(0 == (ctrlType & 0x02))
-						{
-							/*enable rx*/
-							normalRxEnable = TRUE;
-							networkManagerRxEnable = TRUE;
-						}
-						else
-						{
-							/*disable rx*/
-							normalRxEnable = FALSE;
-							networkManagerRxEnable = FALSE;		
+							/*enable rxtx*/
+							hcan_setILMode(0,CAN_IL_APP_SEND|CAN_IL_APP_REC,1);
+							hcan_setILMode(2,CAN_IL_APP_SEND|CAN_IL_APP_REC,1);
+							autosar_dirNm_setTxRxMode(0, 1);
 						}
 						break;
 					default:
-						/*it will never enter here*/
-						uds_negativeRsp(nrsp_requestOutOfRange);
-						return;
+					return;
 				}
-	            uds_pushRspData(ctrlType);
-	            uds_sendResponse();
+
+				if (ctrlType & 0x80)
+				{
+					nt_rsp_reset();
+				}
+				else
+				{
+		            uds_pushRspData(ctrlType);
+		            uds_sendResponse();
+				}
 	        }
 	        else
 	        {
@@ -191,19 +179,42 @@ void serv_comControl(void)
 void serv_dtcSetting(void)
 {
     uint8_t ctrlType = uds_popRequestData(0x00);
-    /* DTC setting type check */
-    if ((servm_dtcSetting_on == ctrlType )
-        || (servm_dtcSetting_off == ctrlType))
+
+    if(0x00 != uds_remainRequestDLC())
     {
-        /* is support type, send positive response */
-        /* For fit program from application only no any real porocess */
-        uds_pushRspData(ctrlType);
-        uds_sendResponse();
+    	uds_negativeRsp(nrsp_incorrectMessageLengthOrInvalidFormat);
+    	return;
+    }
+
+    /* DTC setting type check */
+    if ((servm_dtcSetting_on == (ctrlType & 0x0f) )
+        || (servm_dtcSetting_off == (ctrlType & 0x0f)))
+    {
+    	if(ctrlType & 0x80)
+    	{
+    		nt_rsp_reset();
+    	}
+    	else
+    	{
+            /* is support type, send positive response */
+            /* For fit program from application only no any real porocess */
+            uds_pushRspData(ctrlType);
+            uds_sendResponse();
+    	}
+
+    	 if(servm_dtcSetting_on == (ctrlType & 0x0f))
+    	 {
+    		 uds_dtcSettingOn = TRUE;
+    	 }
+    	 else
+    	 {
+    		 uds_dtcSettingOn = FALSE;
+    	 }
     }
     else
     {
-        /* un-support type */
-        uds_negativeRsp(nrsp_subFunctionNotSupported);
+		/* un-support type */
+		uds_negativeRsp(nrsp_subFunctionNotSupported);
     }
 }
 
@@ -227,6 +238,7 @@ void serv_requestTransferExit(void)
 
 bool uds_updateAppAllowed(void)
 {
+	uds_prog_allow_flag = 1;
 	return uds_prog_allow_flag;
 }
 static void ecuResetTrig(void)
@@ -274,4 +286,5 @@ uint8_t didrd_fblFingerprint(void)
 
 
 /* ------ EOF ------ */
+
 
